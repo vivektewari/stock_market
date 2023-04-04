@@ -49,7 +49,7 @@ class date_funcs:
         return output_dict
 
 
-    def get_periodic_dates(start_date, end_date, period_diff):
+    def get_periodic_dates(start_date, end_date, period_diff,days=0):
         """
         Get a match for dataseries 1 from 2
         algo:Iterate from startd date to end of date and keep adding the incremental dates
@@ -61,7 +61,7 @@ class date_funcs:
         output_dates = []
         d = start_date  # January 1st
 
-        while d < end_date:
+        while d <= end_date:
             output_dates.append(d)
             #yield d
             if period_diff == 'week':
@@ -72,6 +72,8 @@ class date_funcs:
                 d += relativedelta(years=1)
             elif period_diff == 'quater':
                 d += relativedelta(months=3)
+            elif period_diff=='number_days':
+                d+=relativedelta(days=days)
             else: raise("get_periodic_dates|Wrong period_diff")
         return output_dates
 if __name__=="__main__":
