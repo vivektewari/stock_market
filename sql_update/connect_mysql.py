@@ -1,6 +1,7 @@
 import mysql.connector
 import pandas as pd
-
+import pymysql
+from sqlalchemy import create_engine
 
 # mydb=mysql.connector.connect(host="localhost",user="vivek",password="password",database="mydb")
 # if mydb: print("connection Succesful")
@@ -24,6 +25,10 @@ class sql_postman(object):
     def __init__(self,host="localhost",user="vivek",password="password",database="mydb",conversion_dict=None):
         if self.__class__.obj_count !=1:
             self.__class__.obj_count=1
+            self.con_string = create_engine("mysql+pymysql://{user}:{pw}@localhost/{db}"
+                                   .format(user=user,
+                                           pw=password,
+                                           db=database))
             self.mydb=mysql.connector.connect(host=host,user=user,password=password,database=database)
             if self.mydb:
                 print("MYSQL connection Successful")
@@ -44,6 +49,9 @@ class sql_postman(object):
     def write(self,sql):
         self.mycursor.execute(sql)
         self.mydb.commit()
+    def write_df(self,df:pd.DataFrame,table:str):
+        df.to_sql(con=self.con_string, name=table, if_exists="append", index=False,
+                         chunksize=1000, method='multi')
 if __name__ == "__main__":
     import unittest
     def test_sql_postman_read():

@@ -1,0 +1,2 @@
+ws:web_scrapper, the code which scrapes website
+for_sql: codes which takes web scrapper output as input and produces near sql consumable files.

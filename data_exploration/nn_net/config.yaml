@@ -1,0 +1,55 @@
+
+#folder and project information
+
+project: fall_prediction
+
+entity: vivektewari2000
+data_loc: /home/pooja/PycharmProjects/amex_default_kaggle/data/
+output_loc: /home/pooja/PycharmProjects/amex_default_kaggle/outputs/
+weight_loc : /home/pooja/PycharmProjects/stock_valuation/weights/
+rough_loc: /home/pooja/PycharmProjects/amex_default_kaggle/data/data_created/rough/
+reporting_loc: /home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/net/
+group: na
+feature_file_name: "feature_importance_v3.xlsx"
+## TRAINING params
+
+## MODEL params
+model_arch: transformer_encoder_block
+model: simple_nn #time_combination_nn_deeper # time_combination_nn #time_combination_nn_with_variable_mixer ##simple_nn #var_attention_block #transformer_v1 #transformer_v1   #simple_nn #simple_attention_block #time_combination_nn_with_variable_mixer #
+
+
+model_params:
+  input_size : 15 #14
+  output_size : 1
+  dropout : 0.1
+
+
+
+## OPTIMIZER params
+optimizer_class: Adam
+
+min_lr_mod: 0.01
+
+## LOSS params
+loss_func: Weighted_BCELoss # L2Loss #L2Loss_with_penality  # L2Loss #Weighted_BCELoss #Weighted_BCELoss #distance_BCELoss # BCELoss # Weighted_BCELoss #
+# lambda parameter for TD-lambda and UPGO losses
+lmb: 0.9
+reduction: sum
+
+# MISCELLANEOUS params
+learning_rate: 0.05
+weight_decay: 0.001
+epoch: 2000 #39 #2000
+momentum: 0.01
+epsilon: 0.015
+alpha: 0.01
+actor_device: cuda:1
+learner_device: cuda:0
+model_log_freq: 39
+data_loader: fallData
+data_loader_params:
+  max_rows: 100000
+  max_seq: 13
+
+
+

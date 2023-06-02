@@ -1,13 +1,35 @@
 python_codes,sql_reference
-price,price
+price,close_price
 nse_id,nse_id
 stock_price_eod,stock_price_eod
 financials,financials
 tag,tag
-EPS,EPS in Rs
+EPS,basic eps
+Quarterly Results,Quarterly Results
+Balance Sheet,Balance Sheet
 month,month
 value,value
-day,day
+day,date
 stock_space,stock_space
-stock_monthly_metrics,stock_monthly_metrics
+stock_metrics,stock_metrics
 sector,sector
+sheet,sheet
+industry,industry
+s_borrow,Short Term Borrowings
+lborrow,Long Term Borrowings
+equity_share_cap,Equity Share Capital
+face_value,
+cash_equivalent,Cash And Cash Equivalents
+minority_interest,Minority Interest
+ratios,Ratios
+Quarterly,Quarterly Results
+pe_ratio,pe_ratio
+split_multiplier,split_multiplier
+Stock_splits,Stock_splits
+Profit & Loss,Profit & Loss
+Balance Sheet,Balance Sheet
+Capital Structure,Capital Structure
+revenue_growth_1yr,revenue_growth_1yr
+operating_profit_growth_1yr,operating_profit_growth_1yr
+Ratios,Ratios
+stock_price_eod_unadjusted,stock_price_eod_unadjusted

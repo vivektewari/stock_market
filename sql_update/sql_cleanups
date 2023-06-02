@@ -1,0 +1,4 @@
+SET SQL_SAFE_UPDATES = 0;
+update mydb.financials set tag='depreciation' where tag='depreciat';
+update mydb.financials set tag='p/l before other inc., int., excpt. items & tax' where tag='p/l before other inc. , int., excpt. items & tax';
+SET SQL_SAFE_UPDATES = 1;

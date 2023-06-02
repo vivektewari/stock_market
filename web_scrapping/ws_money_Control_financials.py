@@ -10,6 +10,7 @@ import csv
 import glob
 import openpyxl
 from multiprocessing import Pool, Process, cpu_count, Manager
+start=time.time()
 def get_html(url):
     """ Get the HTML of a URL """
     response = requests.get(url)
@@ -35,7 +36,8 @@ def scrape_table(url, stock_name, sheet_name, next_page = False,path=None):
     table = soup.find('table', {'class': 'mctable1'})
     try:rows = table.find_all('tr')
     except:
-        warnings.warn('{} doesnot have {}'.format(stock_name,sheet_name))
+        if next_page:warnings.warn('{} doesnot have {}'.format(stock_name,sheet_name))
+        #else :warnings.warn('{} doesnot have {}'.format(stock_name, sheet_name))
         return -1
 
     if next_page:
@@ -55,8 +57,10 @@ def scrape_table(url, stock_name, sheet_name, next_page = False,path=None):
                     cell_ref = sheet.cell(i + 1, first_empty_col + j + 1)
                     cell_ref.value = el.string
     else:
+
         for row in rows:
-            row_list = [el.string for el in row][:-2]
+            #update 26042023 : chnaged form el.string ->el.text so that in can capture capital structure
+            row_list = [el.text for el in row][:-2]
             sheet.append(row_list)
 
 
@@ -64,7 +68,7 @@ def scrape_table(url, stock_name, sheet_name, next_page = False,path=None):
     d=0
 
 
-def create_csv(save_path,dict):
+def create_csv(save_path,dict,exclude_list=[]):
     """ Create a CSV file for each stock price letter """
 
 
@@ -73,6 +77,7 @@ def create_csv(save_path,dict):
     writer = csv.writer(csvfile)
     writer.writerow(dict.keys())
     for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+        print(letter)
         try:
             soup = get_html('https://www.moneycontrol.com/india/stockpricequote/' + letter)
             time.sleep(5)
@@ -82,13 +87,22 @@ def create_csv(save_path,dict):
 
 
             for link in links:
-                dict['text']=link.text
+
+                if link.text in exclude_list:
+                    continue
+                # else :
+                #     print('included:{}'.format(link.text))
+                #     continue
+                dict['text'] = link.text
                 dict['link']=link['href']
                 d=scrape_quick_links(link['href'])
-                if d  is None:continue
+                if d  is None:
+                    #warnings.warn("Couldn't scrape {} link {}".format(link.text,link['href']))
+                    continue
                 for key in d.keys():
                     if key in dict.keys(): dict[key]=d[key]
                 writer.writerow(list(dict.values()))
+
 
             print("Success for ", letter)
 
@@ -116,6 +130,7 @@ def scrape_quick_links(url):
     """ Scrape quick links from a web page """
 
     soup = get_html(url)
+    #time.sleep(5)
     spans = soup.find('ul',{'class':'comp_inf company_slider'}).find_all('span')
     nse_id=np.NAN
     for c in spans:
@@ -155,18 +170,40 @@ def get_active_href(url):
         if href and href != 'javascript:void();':
             return href
     return None
-def parse_url(url,):
-    while url:
-        # print(url)
-        if first_entry:
-            r = scrape_table(url, stock_name, sheet_name, path=spath + col)
-            if r == -1: r = scrape_table(old_url, stock_name, sheet_name, path=spath + col)
-            if r == -1: break
-            first_entry = False
-        else:
-            scrape_table(url, stock_name, sheet_name, True, path=spath + col)
-        # print(url)
-        url = get_active_href(url)
+def parse_url(file,i,parent_folder,column_list):
+    folder_name = file.loc[i, 'nse_id']
+    spath = parent_folder + '/' + folder_name + '/'
+    if not os.path.exists(spath):
+        os.mkdir(spath)
+    else:
+        return
+    print(folder_name)
+    for col in column_list:
+        if col in ['text', 'link', 'nse_id']: continue
+        url = file.loc[i, col]
+        old_url = url
+        url_array = url.split("/")
+        url_array[-2] = 'consolidated-' + url_array[-2]
+        url = ""
+        # if col !='Ratios':
+        #      continue
+        for el in url_array:
+            url = url + el + "/"
+
+        stock_name = folder_name
+        sheet_name = col
+        first_entry = True
+        while url:
+            # print(url)
+            if first_entry:
+                r = scrape_table(url, stock_name, sheet_name, path=spath + col)
+                if r == -1: r = scrape_table(old_url, stock_name, sheet_name, path=spath + col)
+                if r == -1: break
+                first_entry = False
+            else:
+                scrape_table(url, stock_name, sheet_name, True, path=spath + col)
+            # print(url)
+            url = get_active_href(url)
 def main():
     part=2
     """ Get all the stock web links from A-Z available on
@@ -176,8 +213,10 @@ def main():
                    'Half Yearly Results',
                    'Nine Months Results', 'Yearly Results', 'Cash Flows', 'Ratios', 'Capital Structure']
     if part==1:
+        #excluding all link which are already captured
+        exclude_list=list(pd.read_csv('/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links_.csv')['text'])
         file='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links.csv'
-        create_csv(file,dict=column_list[:])
+        create_csv(file,dict=column_list[:],exclude_list=exclude_list)
 
 
     if part==2:
@@ -187,32 +226,26 @@ def main():
 
 
         """ Ge the financial section data which we want. In this case Balance Sheet of the stock """
-        file = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links_.csv'
+        file = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control_link_file/all_links.csv'
         file=pd.read_csv(file)
-        parent_folder='/home/pooja/PycharmProjects/stock_valuation/data/to_sql/finacials/'
+        #update
+        file=file.reset_index()#[file['nse_id'].isin(['HINDPETRO'])]
+
+        parent_folder='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/financials/17052023/'
         cores = cpu_count()
         pool = Pool(processes=cores)
+        batch=8
         for i in range(len(file)):
-            folder_name=file.loc[i,'nse_id']
-            spath = parent_folder+'/'+folder_name+'/'
-            if not os.path.exists(spath):os.mkdir(spath)
-            else:continue
-            print(folder_name)
-            for col in column_list:
-                if col in ['text', 'link', 'nse_id'] :continue
-                url=file.loc[i,col]
-                old_url=url
-                url_array=url.split("/")
-                url_array[-2]='consolidated-'+url_array[-2]
-                url=""
-                for el in url_array:
-                    url=url+el+"/"
-
-
-                stock_name=folder_name
-                sheet_name=col
-                first_entry = True
-
+            #parse_url(file, i, parent_folder, column_list)
+            pool.apply_async(parse_url,args=(file,i,parent_folder,column_list))
+            if i % int(
+                    batch ) == 0:  # used so that limited process run in memmory. So batch should be cosen considering availibilty of memmory
+                pool.close()
+                pool.join()
+                print(i)
+                pool = Pool(processes=cores)
+        pool.close()
+        pool.join()
 
                     #print(url)
 
@@ -232,3 +265,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print("time taken in seconds:{}".format(time.time() - start))
