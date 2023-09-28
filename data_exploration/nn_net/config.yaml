@@ -19,7 +19,7 @@ model: simple_nn #time_combination_nn_deeper # time_combination_nn #time_combina
 
 
 model_params:
-  input_size : 15 #14
+  input_size : 20 #76 #14 >#32>78
   output_size : 1
   dropout : 0.1
 

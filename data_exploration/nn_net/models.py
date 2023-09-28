@@ -44,15 +44,12 @@ class simple_nn(nn.Module):
     def __init__(self, input_size, output_size, dropout=0.1):
         super(simple_nn, self).__init__()
         self.ffns=nn.ModuleList()
-        #self.dropout = nn.Dropout(dropout)
-        self.layer_norm=nn.ModuleList()
-        self.layer_normal0 = nn.LayerNorm(input_size*13)
-        self.layer_normal1 = nn.LayerNorm(input_size*13*2)
+
         self.dropout=dropout
         # featur engenereing in params 0,1 | time extracting variable sin params 2,3, |100 combination from column space
         #params=[(input_size*13,input_size*13*2,0,0),(input_size*13*2,100,1,0),(100,output_size,0,0)]#,(13,1,0,0),(1,1,0,0),(1*100,100,0,1),(100,1,0,1)]
-        params = [(input_size ,input_size  * 4,1,0),
-                  (input_size  * 4, input_size  * 2,1,0),(input_size  * 2,1,0,0)]#,(1,1,0,0),(1*100,100,0,1),(100,1,0,1)]
+        params = [(input_size ,int(input_size  ),1,0),
+                  (int(input_size  ), int(input_size  /2),1,0),(int(input_size  /2),1,0,0)]#,(1,1,0,0),(1*100,100,0,1),(100,1,0,1)]
         loop=0
         self.params=[]
         for param in params:
@@ -70,7 +67,7 @@ class simple_nn(nn.Module):
             x=x.flatten(start_dim=1)
             #if self.params[i][2] != 0: x = self.layer_norm[i](x)
             x = self.ffns[i](x)
-        return F.sigmoid(x.flatten()) #, att_weight
+        return torch.sigmoid(x.flatten()) #, att_weight
 class time_combination_nn(nn.Module):
     def __init__(self,dropout=0.2,input_size=0,output_size=0):
         super(time_combination_nn, self).__init__()

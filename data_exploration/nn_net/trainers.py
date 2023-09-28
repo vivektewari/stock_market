@@ -70,19 +70,22 @@ if __name__ == "__main__":
         config = SimpleNamespace(**yaml.safe_load(f))
     data_loader_ = dl.__dict__[config.data_loader]
     identifier = 'from_radar/rad_stan_'  # 'intermediate_data/woe_stan_' #'intermediate_data/incremental_'
-    path = '/home/pooja/PycharmProjects/stock_valuation/data/temp/model_running/net/'
-    sector = 'Pharmaceuticals'
-    identifier='month_nifty_pharma_ends_'#'stan5'
+    path = '/home/pooja/PycharmProjects/stock_valuation/data/temp/model_running/net/data/standarized/'
+    sector = 'Nifty_50'#'all' #'Pharmaceuticals' #'all' #
+    identifier='0211'#'stan5'
     data_loader = data_loader_(label='win', weight='weight', path=path+sector+identifier+'dev.csv')
-    data_loader_v = data_loader_( label='win', weight='weight', path=path+sector+identifier+'valid.csv')
+    data_loader_v = data_loader_(label='win', weight='weight', path=path + sector + identifier + 'valid.csv')
+
+    data_loader_oot = data_loader_(label='win', weight='weight', path=path + sector + identifier + 'oot.csv')
     # load model and cost function_'+identifier+'.csv'
     model = mdl.__dict__[config.model]
     # model=model(input_size=1,output_size=1,num_blocks=4,num_heads=2)
     model = model(**config.model_params)
     loss_func = loss.__dict__[config.loss_func]
     callbacks = [MetricsCallback(input_key="targets", output_key="logits",
-                                 directory=config.weight_loc, model_name='transformer_v1', check_interval=100)]
-    pretrained =config.weight_loc + 'april.pth'
+                                 directory=config.weight_loc, model_name='transformer_v1', check_interval=10)]
+    callbacks[0].special_customization(v_file_loc=path.replace('standarized/',"")+ sector + identifier[:2] + 'valid.csv',o_file_loc=path.replace('standarized/',"")+ sector + identifier[:2] + 'oot.csv',oot_dataloader=data_loader_oot)
+    pretrained =config.weight_loc + 'transformer_v1_299.pth'
     #pretrained=None
     train(model=model, data_loader=data_loader, data_loader_v=data_loader_v, loss_func=loss_func, callbacks=callbacks,
           pretrained=pretrained, lr=config.learning_rate,epoch=config.epoch,weight_decay=config.weight_decay)  # config.weight_loc

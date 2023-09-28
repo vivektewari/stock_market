@@ -169,7 +169,7 @@ class growth(data_manupulation):
         return d11
     def calculate_growth(self,df:pd.DataFrame,field:str,years:int,tag:str):
         df=df[df['tag']==field]
-        df=self.sum_last_4(df)
+        #df=self.sum_last_4(df)
         df['base']=df['day'].apply(lambda x:x-relativedelta(years=years))
         #df['base']=df['year']-years
         a=df.set_index('base')[['day','value']].join(df.set_index('day').rename(columns={'value':'base_value'}))
@@ -180,11 +180,11 @@ class growth(data_manupulation):
         return a[['day','tag','value']]
 
     def calculate(self, stock):
-        if stock!='HDFCBANK':return
-        if self.stock_industry[stock].find('Bank')>=0: revenue_tag,operating_profit_tag='(a) int. /disc. on adv/bills','p/l after tax from ordinary activities'
-        else:revenue_tag,operating_profit_tag='total income from operations','p/l after tax from ordinary activities'
+        #if stock!='HDFCBANK':return
+        if self.stock_industry[stock].find('Bank')>=0: revenue_tag,operating_profit_tag='total income','net profit / loss for the year'
+        else:revenue_tag,operating_profit_tag='total revenue','profit/loss after tax and before extraordinary items'
         tag_dataset = get_filter(table=self.dc['financials'], filter_variable=[self.dc['nse_id'],self.dc['sheet'] ,self.dc['tag']],
-                             subset=[ '("' + stock + '")','("' + self.dc['Quarterly'] + '")',str(tuple([revenue_tag,operating_profit_tag]))],
+                             subset=[ '("' + stock + '")','("' + self.dc['Profit & Loss'] + '")',str(tuple([revenue_tag,operating_profit_tag]))],
                              columns=['nse_id','sheet', 'tag','day' ,'value'])
         #revenue_growth=tag_dataset[tag_dataset['tag']==revenue_tag]
         #operation_profit_tag=tag_dataset[tag_dataset['tag']==operating_profit]
@@ -428,7 +428,107 @@ class multiple_set(growth):
 
 #Quaterly ratios
 class beta(data_manupulation):
-    def calculate(self,stock):pass
+
+    def __init__(self,sql_postman, other_postman):
+        super().__init__(sql_postman, other_postman)
+        df = get_filter(table=self.dc['stock_space'])[[0, 1, 2, 3]]
+        self.stock_industry = df.set_index(0).to_dict()[3]
+        self.look_back=5#in years
+        self.period=4 #in weeks
+        self.period_unit='week'
+        self.calculate_freq=12 #in months
+        self.dates={}
+        self.market_data=self.get_market_data('NIFTY_50','stock_price_eod_unadjusted').rename(columns={'perc_return':'market_return'}).set_index('date')
+        self.get_dates()
+
+
+
+
+    def get_market_data(self,stock,table_name):
+        df_price = get_filter(table=self.dc[table_name],  # _unadjusted
+                              filter_variable=[self.dc['nse_id']],
+                              subset=['("' + stock + '")'],
+                              columns=['nse_id', 'date', 'price', 'volume'])
+
+        if df_price.shape[0] == 0: return None
+        df = df_price[df_price['date'].apply(lambda x: (x.weekday() % 7) == 0)]
+        df = self.get_return(df)
+        return  df
+    def get_dates(self):
+        if self.calculate_freq == 12:
+            for i in range(27-self.look_back):
+                self.dates[date(self.look_back+1996+i,4,1)]=date(1996+i,4,1)
+        elif self.calculate_freq == 1:
+            for i in range(27-self.look_back):
+                for j in range(1,13):
+                    self.dates[date(self.look_back+1996+i,j,1)]=date(1996+i,j,1)
+
+
+    def get_return(self,df:pd.DataFrame):
+        """
+
+        :param df: dataframe with variable date and price(on which growth computed)
+        :return:
+        """
+        # 2
+        if self.period_unit=='week':df['base_date'] = df['date'].apply(lambda x: x - relativedelta(weeks=self.period))
+        elif self.period_unit == 'month': df['base_date'] = df['date'].apply(
+            lambda x: x - relativedelta(months=self.period))
+        df = df.set_index('base_date').join(df[['date', 'price']].set_index('date').rename(columns={'price': 'base_price'}),
+                                            )
+        df['perc_return'] = (df['price'] - df['base_price']) / df['base_price']
+        df=df[~df['perc_return'].isna()]#[df['perc_return'].apply(lambda x: abs(x)<0.40)]
+        return df[['date','perc_return']]
+    def calculate(self,stock):
+        """
+        Algo:
+        0. do below step for market stock.
+        implemented in get return
+        1.get the stock price data and filter the datast so that only monday exu=ist
+        2. add the column for current date -period and join the data set and get the return
+
+
+        3. get the dates for which beta will be calculated , for each date get filter dataset for date,date -look back period. row count is less than 50% then skip
+        4. get average period returns and covarinace with market stock and implement the beta formulae.
+        5.append the information in dictionary
+        :param stock:
+        :return:
+        """
+
+        # 1.
+        table_name='stock_price_eod'
+        df_price = get_filter(table=self.dc[table_name],  # _unadjusted
+                              filter_variable=[self.dc['nse_id']],
+                              subset=['("' + stock + '")'],
+                              columns=['nse_id', 'date', 'price', 'volume'])
+
+        if df_price.shape[0] == 0: return None
+        df = df_price[df_price['date'].apply(lambda x: (x.weekday() % 7) == 0)]
+        df=self.get_return(df)
+        if df is None: return None
+
+        returns,std,beta={},{},{}
+
+        for d in self.dates.keys():#calculated in init
+            temp=df[(df['date']>self.dates[d]) & (df['date']<d)]
+            temp=temp[~temp['perc_return'].isna()]
+            returns[d]=temp['perc_return'].mean()
+            std[d]=temp['perc_return'].std()
+            temp=temp.set_index('date').join(self.market_data)  #prepared in init
+            temp=temp[['perc_return','market_return']].cov()
+            beta[d]=temp['perc_return']['perc_return']/temp['market_return']['market_return']
+        output=pd.DataFrame()
+        name=['returns','std','beta']
+        for f in [returns,std,beta]:
+            t=pd.DataFrame(f.items(), columns=['day', 'value'])
+            t['tag']=name.pop(0)
+            output=pd.concat([output,t])
+        output['nse_id']=stock
+        return output
+
+
+
+
 
 
 
@@ -437,14 +537,16 @@ if __name__ == "__main__":
     def test_metrics():  # completed 28/03/22
         sql_postman_=sql_postman(host="localhost",user="reader",password="Password123@",database="mydb",conversion_dict='/home/pooja/PycharmProjects/stock_valuation/codes/sql_update/codes_to_sql_dict.csv')
         #c = pe_ratio(sql_postman_,other_postman=[])
-        c = multiple_set(sql_postman_, other_postman=[])
-        c =matching(sql_postman_, other_postman=[])
+        #c = multiple_set(sql_postman_, other_postman=[])
+        #c =matching(sql_postman_, other_postman=[])
+        c=growth(sql_postman_, other_postman=[])
+        c = beta(sql_postman_, other_postman=[])
         #w=c.calculate('BRIGADE')
-        t=c.calculate('TATASTEEL')
+        t=c.calculate('TCS')
         q=c.iterate_over_all_stocks()#['CESC','TATASTEEL']['CESC','TATASTEEL','GRANULES']
         #c.save_to_loc(q,'/home/pooja/PycharmProjects/stock_valuation/data/to_sql/stock_metrics/to_post/042023/useful_metrics3.2.csv')
-        c.save_to_loc(q,'/home/pooja/PycharmProjects/stock_valuation/data/to_sql/stock_metrics/to_post/042023/useful_metrics_check3.4.csv')
-        #c.save_to_loc(q,'/home/pooja/PycharmProjects/stock_valuation/data/to_sql/stock_metrics/to_post/042023/growth.csv')
+        #c.save_to_loc(q,'/home/pooja/PycharmProjects/stock_valuation/data/to_sql/stock_metrics/to_post/042023/useful_metrics_check3.4.csv')
+        c.save_to_loc(q,'/home/pooja/PycharmProjects/stock_valuation/data/to_sql/stock_metrics/to_post/042023/beta.csv')
     test_metrics()
 print(time.time()-start)
 

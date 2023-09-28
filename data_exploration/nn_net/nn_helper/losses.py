@@ -64,7 +64,7 @@ class Weighted_BCELoss(nn.Module):
         self.func = nn.BCELoss(reduce=False)#nn.BCEWithLogitsLoss(reduction='none')
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, pred, actual):
+    def forward(self, pred, actual_):
         pred = torch.clamp(pred, min=EPSILON_FP16, max=1.0 - EPSILON_FP16)
 
         #sorted = torch.argsort(pred.detach(), descending=True)
@@ -75,9 +75,11 @@ class Weighted_BCELoss(nn.Module):
 
         # weights[final_indices]*=1/(pred-threshold)
         # for i in final_indices:weights[i]*=(pred-threshold)
+        actual=actual_[:,0]
+        weight=actual_[:,1]
         loss_vector = self.func(pred, actual)
 
-        return torch.mean(loss_vector )#* weights)
+        return torch.mean(loss_vector * weight)
 
 class distance_BCELoss(nn.Module):
     def __init__(self):

@@ -45,7 +45,7 @@ def get_price_metrics(dataset:pd.DataFrame,filter_variable:str,price_variable,st
         dict[met.name]=met.calculate(relevant_dataset,price_variable,date,lookup_window)
     return dict
 path='/home/pooja/PycharmProjects/stock_valuation/data/temp/model_running/decision_tree/'
-part=1
+part=3
 com=get_filter(table=dc['stock_space'])
 
 industry_count = com.groupby(3)[0].count()
@@ -149,7 +149,7 @@ if part==1:
                 all_df=pd.concat([all_df,final_df],axis=0)
 
         all_df.to_csv(path+sector+'_classification_data_may.csv')
-part=2
+
 if part==2: # running the model
 
     target='win'
@@ -244,4 +244,53 @@ if part==2: # running the model
         fig.savefig('/home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/decision_tree/'+sector+'_dt_image.png')
     print(imp_dictionary)
     scores.to_csv('/home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/decision_tree/'+'report.csv')
+
+
+if part==3: # running the model
+
+    target='win'
+    from sklearn.tree import DecisionTreeClassifier  # Import Decision Tree Classifier
+    from sklearn.model_selection import train_test_split
+    from sklearn import metrics
+    scores=pd.DataFrame()
+    imp_dictionary={}
+    path = '/home/pooja/PycharmProjects/stock_valuation/data/temp/model_running/net/data/standarized/'
+    sector = 'Pharmaceuticals' #'all #
+    identifier = '0011'  # 'stan5'
+    X_train=pd.read_csv(path+sector+identifier +'dev.csv')#.drop(['day','nse_id','end_price_change','max_price_change','min_price_change'],axis=1).fillna(-999)
+    X_valid=pd.read_csv(path+sector+identifier +'valid.csv')#.drop(['day','nse_id','end_price_change','max_price_change','min_price_change'],axis=1).fillna(-999)
+    varSelected=list(set(list(X_train.columns)).difference(set(['win','weight'])))
+
+    target='win'
+    clf = DecisionTreeClassifier(max_leaf_nodes=10, random_state=0,max_depth=4)
+    clf = clf.fit(X_train[varSelected], X_train[target])
+    order=np.argsort(-np.array(clf.feature_importances_  )   )
+    imp_vars=list(np.array(varSelected)[order][:3] )
+    for key in imp_vars:
+            if key not in imp_dictionary.keys():   imp_dictionary[key]   =1
+            else: imp_dictionary[key] +=1
+    y_pred = clf.predict_proba(X_train[varSelected])
+    y_test_pred=clf.predict_proba(X_valid[varSelected])
+    X_train['predicted'] = y_pred[:, 1]
+    X_valid['predicted'] = y_test_pred[:, 1]
+    # score_test = metrics.roc_auc_score(testTarget['TARGET'], submision[['TARGET']])
+    score_train = metrics.roc_auc_score(X_train[target], X_train['predicted'])
+    score_test= metrics.roc_auc_score(X_valid[target], X_valid['predicted'])
+    scores=pd.concat([scores,pd.DataFrame({'sector':sector,'rows':X_train.shape[0],'target_count':X_train.sum(),'auc_train':score_train,'auc_test':score_test ,'imp_vars':imp_vars.__str__()}       )   ])
+    lorenzCurve(X_valid[target], X_valid['predicted'],save_loc='/home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/decision_tree/'+sector+'_lorenz_curve.png')
+
+    from sklearn import tree
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(4, 4), dpi=600)
+    tree.plot_tree(clf,
+                   feature_names=varSelected,
+                   class_names=target,
+                   filled=True);
+
+    fig.savefig('/home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/decision_tree/__'+sector+'_dt_image.png')
+    print(imp_dictionary)
+    scores.to_csv('/home/pooja/PycharmProjects/stock_valuation/data/for_reports/hypothesis_testing/decision_tree/__'+'report.csv')
+print("time taken :{}".format(time.time()-start))
+
 print("time taken :{}".format(time.time()-start))

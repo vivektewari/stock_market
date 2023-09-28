@@ -12,10 +12,10 @@ import numpy as np
 pd.set_option('mode.chained_assignment',None)
 start=time.time()
 class Metrics():
-    def __init__(self,date_col,stock_name_var,zero_date,lookup_window,price):
+    def __init__(self,date_col,stock_name_var,zero_date:datetime.date,lookup_window,price):
         self.price_var=price
         self.date_col=date_col
-        self.zero_date=datetime.strptime(zero_date,'%Y-%m-%d').date()
+        self.zero_date=zero_date#datetime.strptime(zero_date,'%Y-%m-%d').date()
         self.lookup_window=lookup_window
         self.stock_name_var=stock_name_var
 

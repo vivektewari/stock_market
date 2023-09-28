@@ -4,7 +4,7 @@ from utils.auxilary import date_funcs
 from utils.iv import IV
 from datetime import datetime,date
 import numpy as np
-def standardize(dev,valid,path=None,dist_report=None,skip_vars=[]):
+def standardize(dev,standarize_files,path=None,dist_report=None,skip_vars=[]):
 
     if dist_report is None:
         distReports(dev.drop(skip_vars,axis=1)).to_csv(path  + 'dev_dist.csv')
@@ -14,7 +14,7 @@ def standardize(dev,valid,path=None,dist_report=None,skip_vars=[]):
     dict = rf[['mean', 'std']].to_dict()
     loop = 0
     files=[]
-    for file in [dev, valid]:
+    for file in standarize_files:
         df = file
         var_list = list(set(df.columns).difference(set(skip_vars)))
         for v in var_list:

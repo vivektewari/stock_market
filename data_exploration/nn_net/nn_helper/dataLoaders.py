@@ -26,7 +26,7 @@ class fallData(Dataset):
                             , dtype=torch.float32),torch.tensor(data[self.weight_col], dtype=torch.float32)
 
 
-        return {'targets': label.float(), 'image_pixels': pixel,'weight':weight}
+        return {'targets': torch.tensor([label.float(),weight]), 'image_pixels': pixel,'weight':weight}
 
     def __len__(self):
         return self.data.shape[0]

@@ -99,6 +99,11 @@ class data_manupulation():
         self.other_postman.read(excel)
     def write_excel(self,df,type):pass
     def iterate_over_all_stocks(self,comp_list=None):
+        """
+
+        :param comp_list:
+        :return:
+        """
         if comp_list is None:
             sql1 = 'select {} from {} '.format(self.dc['nse_id'], self.dc['stock_space'])
             comp_list = list(self.read_sql(sql=sql1, columns=['nse_id'])['nse_id'].unique())
@@ -143,17 +148,18 @@ class data_manupulation():
 
     @abstractmethod
     def calculate(self):
-
         """
          algo:
-         1.get the desried data from sql and covert to datframe
+         1.get the desried data from sql and covert to dataframe
          2. create derived variables
          3. generates periodic(week,month,quater) and intersect with 1st dataset
          4. get nearest dates for each date 1st dataset and get closest date in dataset 2
          4b:optional get last 4 date dataset and take sum or avergae(e.g. for pe ratio)
          5. join the two dataset for dates for which we have dates in dataset 2
          6. Derive ratios for dates from 4
-         7 .optional :save dataset to to_sql_folder or temporary"""
+         7 .optional :save dataset to to_sql_folder or temporary
+         return: df|the one which goes inside sql in same format
+         """
         pass
 if __name__=="__main__":
     import unittest

@@ -170,7 +170,7 @@ def get_active_href(url):
         if href and href != 'javascript:void();':
             return href
     return None
-def parse_url(file,i,parent_folder,column_list):
+def parse_url(file,i,parent_folder,column_list,next_page_dict):
     folder_name = file.loc[i, 'nse_id']
     spath = parent_folder + '/' + folder_name + '/'
     if not os.path.exists(spath):
@@ -203,23 +203,25 @@ def parse_url(file,i,parent_folder,column_list):
             else:
                 scrape_table(url, stock_name, sheet_name, True, path=spath + col)
             # print(url)
-            url = get_active_href(url)
-def main():
-    part=2
+            if next_page_dict[col][folder_name]:url = get_active_href(url)
+            else :url=False
+column_list = ['text', 'link', 'nse_id', 'Balance Sheet', 'Profit & Loss', 'Quarterly Results',
+                   'Half Yearly Results',
+                   'Nine Months Results', 'Yearly Results', 'Cash Flows', 'Ratios', 'Capital Structure']
+def part1():
+
     """ Get all the stock web links from A-Z available on
     moneycontrol and store them into
     csv files alphabetically """
-    column_list = ['text', 'link', 'nse_id', 'Balance Sheet', 'Profit & Loss', 'Quarterly Results',
-                   'Half Yearly Results',
-                   'Nine Months Results', 'Yearly Results', 'Cash Flows', 'Ratios', 'Capital Structure']
-    if part==1:
-        #excluding all link which are already captured
-        exclude_list=list(pd.read_csv('/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links_.csv')['text'])
-        file='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links.csv'
-        create_csv(file,dict=column_list[:],exclude_list=exclude_list)
 
 
-    if part==2:
+    #excluding all link which are already captured
+    exclude_list=list(pd.read_csv('/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links_.csv')['text'])
+    file='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links.csv'
+    create_csv(file,dict=column_list[:],exclude_list=exclude_list)
+
+def part2(parent_folder,next_page_dict):
+
         """ Read a url for stock and scrape the urls of financial section
         like Balance Sheet, Profit and Loss and, Quarterly an Yearly results,
         Cashflow statments, etc. """
@@ -231,13 +233,14 @@ def main():
         #update
         file=file.reset_index()#[file['nse_id'].isin(['HINDPETRO'])]
 
-        parent_folder='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/financials/17052023/'
+        #parent_folder='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/financials/19062023/'
         cores = cpu_count()
         pool = Pool(processes=cores)
         batch=8
+
         for i in range(len(file)):
             #parse_url(file, i, parent_folder, column_list)
-            pool.apply_async(parse_url,args=(file,i,parent_folder,column_list))
+            pool.apply_async(parse_url,args=(file,i,parent_folder,column_list,next_page_dict))
             if i % int(
                     batch ) == 0:  # used so that limited process run in memmory. So batch should be cosen considering availibilty of memmory
                 pool.close()
@@ -264,5 +267,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    part2()
     print("time taken in seconds:{}".format(time.time() - start))
