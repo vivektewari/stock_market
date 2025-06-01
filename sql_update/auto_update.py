@@ -1,3 +1,5 @@
+import os
+
 from connect_mysql import sql_postman
 import glob
 import pandas as pd
@@ -82,8 +84,8 @@ class auto_updater():
 
 
                 next_page[d]=temp.set_index(self.dc['nse_id'])['next_page'].to_dict()
-
-            part2(parent_folder=path,next_page_dict=next_page)
+            #todo: remove parallel processing=False
+            part2(parent_folder=path,next_page_dict=next_page)#,parallel_processing=True
             convert(work='financials',path=path,save_path=savepath)
             data=to_sql(work='financials',path=savepath,return_data=True)
             if data.shape[0]==0:
@@ -101,7 +103,8 @@ class auto_updater():
 
 if __name__ == "__main__":
     def update_test():
-        work ='financials'# 'stock_price_eod_unadjusted'
+        work ='stock_price_eod_unadjusted'
+        work='financials'
         a=auto_updater()
         a.update(work)
     update_test()

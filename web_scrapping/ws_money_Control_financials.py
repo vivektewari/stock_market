@@ -181,6 +181,7 @@ def parse_url(file,i,parent_folder,column_list,next_page_dict):
     for col in column_list:
         if col in ['text', 'link', 'nse_id']: continue
         url = file.loc[i, col]
+
         old_url = url
         url_array = url.split("/")
         url_array[-2] = 'consolidated-' + url_array[-2]
@@ -193,9 +194,14 @@ def parse_url(file,i,parent_folder,column_list,next_page_dict):
         stock_name = folder_name
         sheet_name = col
         first_entry = True
+        # removing folders which are not present in stock space table in db
+        if folder_name not in next_page_dict[col].keys():
+            os.rmdir(spath)
+            return None
         while url:
             # print(url)
             if first_entry:
+
                 r = scrape_table(url, stock_name, sheet_name, path=spath + col)
                 if r == -1: r = scrape_table(old_url, stock_name, sheet_name, path=spath + col)
                 if r == -1: break
@@ -220,7 +226,7 @@ def part1():
     file='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control/all_links.csv'
     create_csv(file,dict=column_list[:],exclude_list=exclude_list)
 
-def part2(parent_folder,next_page_dict):
+def part2(parent_folder,next_page_dict,parallel_processing=True):
 
         """ Read a url for stock and scrape the urls of financial section
         like Balance Sheet, Profit and Loss and, Quarterly an Yearly results,
@@ -233,22 +239,22 @@ def part2(parent_folder,next_page_dict):
         #update
         file=file.reset_index()#[file['nse_id'].isin(['HINDPETRO'])]
 
-        #parent_folder='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/financials/19062023/'
-        cores = cpu_count()
-        pool = Pool(processes=cores)
-        batch=8
 
-        for i in range(len(file)):
-            #parse_url(file, i, parent_folder, column_list)
-            pool.apply_async(parse_url,args=(file,i,parent_folder,column_list,next_page_dict))
-            if i % int(
-                    batch ) == 0:  # used so that limited process run in memmory. So batch should be cosen considering availibilty of memmory
-                pool.close()
-                pool.join()
-                print(i)
-                pool = Pool(processes=cores)
-        pool.close()
-        pool.join()
+        if parallel_processing:
+            #have to keep low else server will block you.Don't change below
+            batch=8*2
+            cores = cpu_count()
+
+            pool = Pool(processes=cores*2)
+            for i in range(len(file)):
+                #parse_url(file, i, parent_folder, column_list)
+                pool.apply_async(parse_url,args=(file,i,parent_folder,column_list,next_page_dict))
+
+            pool.close()
+            pool.join()
+        else:
+            for i in range(len(file)):
+                parse_url(file, i, parent_folder, column_list, next_page_dict)
 
                     #print(url)
 
@@ -267,5 +273,6 @@ def part2(parent_folder,next_page_dict):
 
 
 if __name__ == '__main__':
-    part2()
+    parent_folder = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/financials/30032025/'
+    part2(parent_folder=parent_folder)
     print("time taken in seconds:{}".format(time.time() - start))

@@ -36,14 +36,11 @@ def string_to_float(mc_file:pd.DataFrame,cols:list,date_col:str="",date_col_form
 
 start=time.time()
 
-work='convert_financials'#''convert_price' #'convert_financials'#'stock_space' #
+work='convert_price'#''convert_price' #'convert_financials'#'stock_space' #
 def convert(work,path,save_path):
     if work=='convert_price':
         #update
-        path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/price/01012000__31122020/'
-        #path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/price/01_jan_2021__31_12_2022/faults/'
-        save_path='/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/01012000__31122020/'
-        #save_path='/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/posted/01012021_31122022/faults/'
+
 
 
         all_fol = glob.glob(path +'*/')
@@ -54,12 +51,19 @@ def convert(work,path,save_path):
             if os.path.isfile(save_path+stock_name+'.csv'):continue
             try:df=pd.read_excel(fol+'/'+'price.xlsx')[['Date','Close','Volume']][1:]
             except:
-                warnings.warn("{} file doesnt exist".format(stock_name))
-                continue
-            try:df=string_to_float(df,cols=['Close','Volume'],date_col='Date',date_col_format="%d-%m-%Y")
+                try:#for indices for which volume doent exist
+                    df=pd.read_excel(fol+'/'+'price.xlsx')[['Date','Close']][1:]
+                    df['Volume']="-1"
+                except:
+                    warnings.warn("{} file doesnt exist".format(stock_name))
+                    continue
+            try:
+                df=string_to_float(df,cols=['Close','Volume'],date_col='Date',date_col_format="%d-%m-%Y")
             except:
-                warnings.warn("Not in desired format so skipping {}".format(stock_name))
-                continue
+                try:df=string_to_float(df,cols=['Close','Volume'],date_col='Date',date_col_format="%Y-%m-%d")
+                except:
+                    warnings.warn("Not in desired format so skipping {}".format(stock_name))
+                    continue
             df['Symbol']=stock_name
             df.to_csv(save_path+stock_name+'.csv',index=False)
     if work == 'financials':
@@ -164,4 +168,7 @@ def convert(work,path,save_path):
             # df = string_to_float(df, cols=['Close', 'Volume'], date_col='Date', date_col_format="%d-%m-%Y")
             # df['Symbol'] = stock_name
             # df.to_csv(save_path + stock_name + '.csv', index=False)
+path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/price/07042023__10052024/'
+save_path='/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/07042023__10052024/'
+convert(work,path,save_path)
 print("time taken in seconds:{}".format(time.time()-start))

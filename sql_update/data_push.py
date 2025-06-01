@@ -12,7 +12,7 @@ from dateutil.relativedelta  import relativedelta
 
 start=time.time()
 
-work='macro_economic_data'#'stock_metrics'#'macro_economic_data'#'stock_metrics'  #'stock_price_eod_unadjusted'#''stock_price_eod' #'stock_metrics'#'stock_price_eod'#'stock_metrics'#'stock_split_information'#'financial_data'#'stock_price_eod'#'stock_metrics' #'stock_price_eod'#'stock_space'#'financial_data'#
+work='stock_price_eod' #'stock_metrics'#'macro_economic_data'#'stock_metrics'  #'stock_price_eod_unadjusted'#''stock_price_eod' #'stock_metrics'#'stock_price_eod'#'stock_metrics'#'stock_split_information'#'financial_data'#'stock_price_eod'#'stock_metrics' #'stock_price_eod'#'stock_space'#'financial_data'#
 def to_sql(work,path,return_data=False):
     return_file = pd.DataFrame()
     sql_postman_ = sql_postman(host="localhost", user="vivek", password="password", database="mydb",
@@ -45,11 +45,8 @@ def to_sql(work,path,return_data=False):
         #myresult = sql_postman_.read("""select nse_id from stock_price_eod""".format(sql_postman_.sql_dict['nse_id']))
         #nse_ids= nse_ids.difference(set([myresult[i][0] for i in range(len(myresult))]))
         #update
-        pathData = "/home/pooja/PycharmProjects/stock_valuation/data/raw_data/data_1990_2020/stock_data/"
-        pathData ="/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/01012021_31122022/"
-        pathData = "/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/01012000__31122020/"
-        pathData ='/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/posted/01012021_31122022/faults/'
-        pathData ="/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/kaggle_data_unadjusted/Datasets/SCRIP/"
+
+
         all_files = glob.glob(path + "/*.csv")
         loop = 0
         dict_1={'Date':'date','Symbol':'nse_id','Close':'close_price','Volume':'volume'}
@@ -71,24 +68,15 @@ def to_sql(work,path,return_data=False):
 
             try:
                 if return_data:return data
-                else:sql_postman_.write_df(data, table="stock_price_eod_unadjusted")
+                else:sql_postman_.write_df(data, table='stock_price_eod')
             except:
                 warnings.warn("may be violation of pk integrity :{}".format(s))
                 continue
 
     if work=='financials':
-        myresult = sql_postman_.read("""select {} from stock_space""".format(sql_postman_.sql_dict['nse_id']))
-        #nse_ids = set([myresult[i][0] for i in range(len(myresult))])
-        # quick_fix to remove the stocks whose entry have been done
-        # myresult = sql_postman_.read("""select nse_id from stock_price_eod""".format(sql_postman_.sql_dict['nse_id']))
-        # nse_ids= nse_ids.difference(set([myresult[i][0] for i in range(len(myresult))]))
-        #update here
-        pathData = "/home/pooja/PycharmProjects/stock_valuation/data/raw_data/data_1990_2020/stock_data/"
-        #path = '/home/pooja/PycharmProjects/stock_valuation/data/to_sql/financials/to_post/170523_ratios/'
-        # pathData ="/home/pooja/PycharmProjects/stock_valuation/data/raw_data/data_1990_2020/index_data/"
+
         all_fol = glob.glob(path + "/*/")
-        loop = 0
-        #dict_1 = {'Date': 'date', 'Symbol': 'nse_id', 'Close': 'close_price', 'Volume': 'volume'}
+
         for fol in all_fol:
 
             stock_name = fol.split("/")[-2]
@@ -193,26 +181,33 @@ def to_sql(work,path,return_data=False):
             #     else:
             #         raise Exception(exception_string)
     if work=='macro_economic_data':
-        path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/macro_economic_data/'
-        loc=['1yr_bond_india_rate.csv',
-             'cpi_yoy.csv','dollar_to_inr.csv','gold_spot_usd.csv','fdi_inflow.csv','Crude_Oil_WTI_Spot_US_Dollar.csv','us_gdp.csv'
+        #path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/macro_economic_data/'
+        loc=['1yr_bond_india_rate.csv','cpi_yoy.csv','dollar_to_inr.csv','gold_spot_usd.csv','fdi_inflow.csv','Crude_Oil_WTI_Spot_US_Dollar.csv','us_gdp.csv'
              ]
         files=[]
 
-        for i in range(6,7):
-            name=loc.pop(6)
+
+        for i in range(0,7):
+            name=loc.pop(0)
             print(name)
             file=pd.read_csv(path+name)
             file['country']='India'
+
             if i in [0,2,3,5]:
                 if i in [3,5]:
                     file['country'] = 'USA'
                 file=file[['day','Price','country']].rename(columns={'Price':'value'})
                 file['tag']=name.split(".csv")[0]
+                myresult = sql_postman_.read(
+                    """SELECT MAX(month) as max_date FROM macro_variable where tag='{}'""".format(name.split(".csv")[0]))
+
 
             elif i==1:
                 file = file[['day', 'Actual2','country']].rename(columns={'Actual2': 'value'})
                 file['tag'] = 'cpi_yoy'
+                # Removing rows which are also present in database
+                myresult = sql_postman_.read(
+                    """SELECT MAX(month) as max_date FROM macro_variable where tag='{}'""".format('cpi_yoy'))
             elif i==4:
                 all=pd.DataFrame()
                 for v in ['fii_Gross_Purchase','fii_Gross_Sales','dii_Gross_Purchase','dii_Gross_Sales']:
@@ -221,13 +216,23 @@ def to_sql(work,path,return_data=False):
 
                     all=pd.concat([all,temp])
                 file=all
+                # Removing rows which are also present in database
+                myresult = sql_postman_.read(
+                    """SELECT MAX(month) as max_date FROM macro_variable where tag='{}'""".format('fii_Gross_Purchase'))
             elif i==6:
                 v='Actual2'
                 temp = file[['day', v,'country']].rename(columns={v: 'value'})
-                temp['day']=temp['day'].apply(lambda x: datetime.strptime(x,'%d/%m/%y'))
+                #temp['day']=temp['day'].apply(lambda x: datetime.strptime(x,'%d/%m/%y'))
                 temp['tag']='gdp_growth_qoq'
                 temp['country']='USA'
                 file=temp
+                # Removing rows which are also present in database
+                myresult = sql_postman_.read(
+                    """SELECT MAX(month) as max_date FROM macro_variable where tag='{}'""".format('gdp_growth_qoq'))
+
+
+            file=file[pd.to_datetime(file['day']).dt.date>myresult[0][0]]
+
 
             file['value'] = file['value'].map(float)
             files.append(file)
@@ -235,13 +240,14 @@ def to_sql(work,path,return_data=False):
         final=final.drop_duplicates(['month', 'country', 'tag'])
         sql_postman_.write_df(final, table="macro_variable")
 
+if __name__=="__main__":
 
-
-to_sql('macro_economic_data',path='/home/pooja/PycharmProjects/stock_valuation/data/raw_data/macro_economic_data/')
-
-
-print("time taken in seconds:{}".format(time.time()-start))
-#mydb.close()
+    # to_sql(work='stock_price_eod' ,
+    #        path= '/home/pooja/PycharmProjects/stock_valuation/data/to_sql/prices/to_post/07042023__10052024/')
+    #
+    to_sql(work='macro_economic_data' , path= '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/macro_economic_data/till_mar_25/')
+    # print("time taken in seconds:{}".format(time.time()-start))
+    # #mydb.close()
 
 
 

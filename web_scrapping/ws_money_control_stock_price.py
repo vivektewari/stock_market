@@ -67,6 +67,7 @@ def scrape_table(page_source, stock_name, sheet_name,path=None,next_page=False):
     wb.save(path + '.xlsx')  # .format(stock_name)
 
 def parse_url(file, i, save_path):
+
     #driver = webdriver.Chrome("/usr/lib/chromium-browser/chromedriver", options=options)
 
     nse_id = file.loc[i, 'nse_id']
@@ -84,20 +85,25 @@ def parse_url(file, i, save_path):
 
     url = file.loc[i, 'price_link']
     try:
+
         driver.get(url)
-        #time.sleep(5)
+
+        time.sleep(3)
     except:
         warnings.warn('{} couldnt get th url'.format(nse_id))
         return
-    Select(driver.find_element(By.NAME, "ex")).select_by_index(1)
-    Select(driver.find_element(By.NAME, "frm_dy")).select_by_index(0)
-    Select(driver.find_element(By.NAME, "frm_mth")).select_by_index(0)
-    Select(driver.find_element(By.NAME, "frm_yr")).select_by_index(2)
-    Select(driver.find_element(By.NAME, "to_dy")).select_by_index(30)
-    Select(driver.find_element(By.NAME, "to_mth")).select_by_index(11)
-    Select(driver.find_element(By.NAME, "to_yr")).select_by_index(1)
-    driver.find_element(By.CSS_SELECTOR, "input[src*=go_btn]").click()
-    # time.sleep(5)
+    #todo:change here
+    try:
+        Select(driver.find_element(By.NAME, "ex")).select_by_index(1)
+    except:warnings.warn('page doesnt have exchnage, continuing it as indices')
+    Select(driver.find_element(By.NAME, "frm_dy")).select_by_index(6)#day-1
+    Select(driver.find_element(By.NAME, "frm_mth")).select_by_index(3)#month-1
+    Select(driver.find_element(By.NAME, "frm_yr")).select_by_index(24)#year-1
+    Select(driver.find_element(By.NAME, "to_dy")).select_by_index(10)
+    Select(driver.find_element(By.NAME, "to_mth")).select_by_index(4)
+    Select(driver.find_element(By.NAME, "to_yr")).select_by_index(0)
+    driver.find_element(By.CSS_SELECTOR, "input[src*=go_btn]").click() #11/05/24 changed form click()->submit()
+
     page_exist=True
     next_page=False
     while page_exist:
@@ -113,8 +119,14 @@ def parse_url(file, i, save_path):
     driver.quit()
 
 options = Options()
+my_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"
+options.add_argument(f"--user-agent={my_user_agent}")
 options.add_argument('--disable-notifications')
-options.add_argument("--headless");
+options.add_argument("--headless=new") #changed o 11/5/24#options.add_argument("--headless");
+options.add_experimental_option("prefs",
+{"profile.default_content_setting_values.notifications": 2
+ })
+options.set_capability('pageLoadStrategy', 'eager')
 
 
 
@@ -162,11 +174,12 @@ if part==2:
     file = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/money_control_link_file/price_links.csv'
     file = pd.read_csv(file)
     #update
-    save_path = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/price/01_jan_2021__31_12_2022/'
+    #todo:create a folder and chnage this
+    save_path = '/home/pooja/PycharmProjects/stock_valuation/data/raw_data/web_scrapped/money_control/price/10052024__28032025/'
 
     cores = cpu_count()
     pool = Pool(processes=cores)
-    batch = 8
+    batch = 16
     for i in range(len(file)):
         #parse_url(file, i, save_path)
         nse_id=file.loc[i, 'nse_id']
