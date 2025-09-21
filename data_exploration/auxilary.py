@@ -19,6 +19,8 @@ class Metrics():
         self.lookup_window=lookup_window
         self.stock_name_var=stock_name_var
 
+
+
     def clean_dataset(self,dataset):
         """
         take price dataset and get subset it so that only zero date to lookupwindow exists

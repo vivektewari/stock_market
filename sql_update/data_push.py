@@ -83,6 +83,7 @@ def to_sql(work,path,return_data=False):
             if stock_name not in list(nse_ids): continue
 
             all_file = glob.glob(fol + '*csv')
+            all_file = glob.glob(fol + '*csv')
 
             for file in all_file:
                 file_name = file.split("/")[-1].split(".")[0]

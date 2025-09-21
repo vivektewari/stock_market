@@ -37,7 +37,7 @@ class sql_postman(object):
             self.mycursor = self.mydb.cursor()
 
             self.sql_dict=pd.read_csv(conversion_dict).set_index("python_codes").to_dict()['sql_reference']
-            c=0
+
     def read(self,sql):
         """
         Implements table read in for : select var1,var2 from table1 where var1=value and var1=value
@@ -45,7 +45,7 @@ class sql_postman(object):
         :return:
         """
         self.mycursor.execute(sql)
-        return self.mycursor.fetchall()
+        return self.mycursor.fetchall(),[desc[0] for desc in self.mycursor.description]
     def write(self,sql):
         self.mycursor.execute(sql)
         self.mydb.commit()

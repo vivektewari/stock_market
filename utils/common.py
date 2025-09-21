@@ -3,23 +3,32 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 import os
+from datetime import datetime, timedelta
 sql_postman_=sql_postman(host="localhost",user="vivek",password="password",database="mydb",conversion_dict='/home/pooja/PycharmProjects/stock_valuation/codes/sql_update/codes_to_sql_dict.csv')
 dc=sql_postman_.sql_dict
-def get_filter(table:str,filter_variable:str="", subset:tuple=(),columns:list=[])->pd.DataFrame:
+def get_filter(table:str,filter_variable:str="", subset='',columns:list=[])->pd.DataFrame:
+
     if filter_variable is "":
         sql1 = 'select * from {} '.format(table)
     elif isinstance(filter_variable, list):
         cond=""
         for i in range(len(filter_variable)):
             if i!=0:cond+=" and "
-            cond+=filter_variable[i] + " in "+ subset[i]
+            if len(subset[i]) == 1: cond+=filter_variable[i] + " in "+ "('{}')".format(subset[i][0])
+            else:cond+=filter_variable[i] + " in "+ str(subset[i])
         sql1='select * from {} where '.format(table)+cond
+
+
 
 
     else:
         sql1='select * from {} where {} in {}'.format(table,filter_variable,subset)
-    sql_dataset= sql_postman_.read(sql1)
-    if len(columns)==0: columns=[i for i in range(len(sql_dataset[0]))]
+    #print(sql1)
+    sql_dataset,columns_in_table= sql_postman_.read(sql1)
+
+    if len(columns)==0:
+        columns=columns_in_table
+        #columns=[i for i in range(len(sql_dataset[0]))]
     df=pd.DataFrame(sql_dataset,columns=columns)
     return df
 
@@ -33,6 +42,18 @@ def distReports(df, ivReport=None):
     final['uniqueValues'] = final['varName'].apply(lambda x: df[x].unique()[0:50])
     if ivReport is not None: final.join(ivReport)
     return final
+def first_weekday_of_month(date_str):
+        # Parse the input string to a date
+        input_date = datetime.strptime(date_str, "%Y-%m-%d")
+
+        # Get the first day of that month
+        first_day = input_date.replace(day=1)
+
+        # Check if it's a weekday (Monday=0, Sunday=6)
+        while first_day.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+            first_day += timedelta(days=1)
+
+        return first_day.strftime("%Y-%m-%d")
 def lorenzCurve(y_test,y_score,save_loc=None):
     n_classes = 1
     fpr = dict()
@@ -66,6 +87,32 @@ def remove_empty_directory(path_abs):
     for path, _, _ in walk[::-1]:
         if len(os.listdir(path)) == 0:
             os.rmdir(path)
+
+
+def calculate_annual_growth_with_dates(start_date, end_date, start_price, end_price, date_format="%Y-%m-%d"):
+    """
+    Calculate annual percentage growth rate (CAGR) using dates.
+
+    :param start_date: Start date as string (e.g. '2021-01-01')
+    :param end_date: End date as string (e.g. '2024-06-24')
+    :param start_price: Initial price
+    :param end_price: Final price
+    :param date_format: Format of the input date strings
+    :return: Annual growth rate in percentage
+    """
+    # Convert string dates to datetime objects
+    start = datetime.strptime(start_date, date_format)
+    end = datetime.strptime(end_date, date_format)
+
+    # Calculate the number of days and convert to years
+    days_difference = (end - start).days
+    years = days_difference / 365.25  # Using 365.25 to account for leap years
+
+    if start_price <= 0 or years <= 0:
+        raise ValueError("Start price must be > 0 and end date must be after start date.")
+
+    cagr = ((end_price / start_price) ** (1 / years)) - 1
+    return cagr * 100  # Return percentage
 def match(df1:pd.DataFrame,df2:pd.DataFrame,col1:str,col2:str,error_threshold:float)->pd.DataFrame:
     """
 

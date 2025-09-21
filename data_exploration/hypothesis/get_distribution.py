@@ -22,7 +22,7 @@ ivData=a.iv_all(binned,'win')
 writer = pd.ExcelWriter(path+"iv_with_5rank.xlsx")
 ivData.to_excel(writer,sheet_name="iv_detailed")
 ivData.groupby('variable')['IV'].sum().to_excel(writer,sheet_name="iv_summary")
-writer.save()
+
 writer.close()
 #df=df[df['price_to_earning_yr'] == df['price_to_earning_yr']]
 df=df[(df['price_to_earning_yr']>0) & (df['price_to_earning_yr']<40) ].dropna()
