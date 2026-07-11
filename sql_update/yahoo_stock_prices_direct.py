@@ -3,29 +3,6 @@ import mysql.connector
 import pandas as pd
 from datetime import datetime
 
-# # Database connection
-# db = mysql.connector.connect(
-#     host="localhost",
-#     user="your_username",
-#     password="your_password",
-#     database="stock_data"
-# )
-# cursor = db.cursor()
-#
-# # Create table if not exists
-# cursor.execute("""
-# CREATE TABLE IF NOT EXISTS stock_prices (
-#     stock_symbol VARCHAR(10),
-#     date DATE,
-#     open FLOAT,
-#     high FLOAT,
-#     low FLOAT,
-#     close FLOAT,
-#     adj_close FLOAT,
-#     volume BIGINT,
-#     PRIMARY KEY (stock_symbol, date)
-# )
-# """)
 
 def get_latest_date(stock_symbol,postman):
     output=postman.read("SELECT MAX(date) FROM mydb.stock_price_eod_yahoo WHERE nse_id = '{}'".format(stock_symbol))
